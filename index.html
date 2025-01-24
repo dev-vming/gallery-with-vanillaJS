@@ -17,6 +17,30 @@
     const ctx = canvas.getContext('2d');
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
+
+    // image
+    const image = document.createElement('img');
+    document.body.appendChild(image);
+    image.src='./images/01.jpg';
+    image.onload = () => {
+      ctx.drawImage(image,0,0);
+    }
+
+    // video
+    const video = document.createElement('video');
+    document.body.appendChild(video);
+    video.src='./videos/01.mp4';
+    video.autoplay = true;
+    video.loop = true;
+    video.onloadeddata =() => {
+      draw();
+    }
+
+    // 모니터가 지원하는 주사율에 맞게 화면에 반복적으로 그려줌
+    function draw () {
+      requestAnimationFrame(draw);
+      ctx.drawImage(video,100,100,200,200);
+    }
   </script>
 </body>
 </html>
