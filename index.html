@@ -1,46 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
-  <script>
-    const canvas = document.createElement('canvas');
-    const size = 720;
-    canvas.width = size * window.devicePixelRatio;
-    canvas.height = size * window.devicePixelRatio;
-    canvas.style.width = size + 'px';
-    canvas.style.height = size + 'px';
-    document.body.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      const canvas = document.createElement("canvas");
+      const size = 720;
+      canvas.width = size * window.devicePixelRatio;
+      canvas.height = size * window.devicePixelRatio;
+      canvas.style.width = size + "px";
+      canvas.style.height = size + "px";
+      document.body.appendChild(canvas);
+      const ctx = canvas.getContext("2d");
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
+      const gravity = 0.5;
+      const bounceFactor = 0.7;
 
-    // image
-    const image = document.createElement('img');
-    document.body.appendChild(image);
-    image.src='./images/01.jpg';
-    image.onload = () => {
-      ctx.drawImage(image,0,0);
-    }
+      const balls = [];
 
-    // video
-    const video = document.createElement('video');
-    document.body.appendChild(video);
-    video.src='./videos/01.mp4';
-    video.autoplay = true;
-    video.loop = true;
-    video.onloadeddata =() => {
-      draw();
-    }
+      let handle = 0;
 
-    // 모니터가 지원하는 주사율에 맞게 화면에 반복적으로 그려줌
-    function draw () {
-      requestAnimationFrame(draw);
-      ctx.drawImage(video,100,100,200,200);
-    }
-  </script>
-</body>
+      function getRandomColor(){
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for(let i= 0; i<6; i++){
+          color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+      }
+
+      function getRandomSize(min,max){
+        return Math.floor(Math.random() * (max-min+1))+min;
+      }
+
+      canvas.onclick = (event) => {
+        const ball = {
+          x: 0,
+          y: 0,
+          radius: getRandomSize(20,50),
+          color: getRandomColor(),
+          velocity: 0,
+        };
+        ball.x = event.offsetX;
+        ball.y = event.offsetY;
+        ball.velocity = 0;
+        balls.push(ball);
+        cancelAnimationFrame(handle);
+        update();
+      };
+
+      function update() {
+        handle = requestAnimationFrame(update);
+        ctx.clearRect(0, 0, size, size);
+        balls.forEach((ball) => {
+          ctx.fillStyle = ball.color;
+          if (!ball.x && !ball.y) return;
+          ball.velocity += gravity;
+          ball.y += ball.velocity;
+
+          if (ball.y + ball.radius > size) {
+            ball.y = size - ball.radius;
+            ball.velocity = -ball.velocity * bounceFactor;
+          }
+          drawBall(ball);
+        });
+      }
+
+      function drawBall(ball) {
+        
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    </script>
+  </body>
 </html>
