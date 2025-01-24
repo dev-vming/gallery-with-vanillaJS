@@ -8,74 +8,58 @@
   <body>
     <script>
       const canvas = document.createElement("canvas");
-      const size = 720;
-      canvas.width = size * window.devicePixelRatio;
-      canvas.height = size * window.devicePixelRatio;
-      canvas.style.width = size + "px";
-      canvas.style.height = size + "px";
+      const width = 720;
+      const height = 250;
+      canvas.width = width * window.devicePixelRatio;
+      canvas.height = height * window.devicePixelRatio;
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
       document.body.appendChild(canvas);
       const ctx = canvas.getContext("2d");
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-      const gravity = 0.5;
-      const bounceFactor = 0.7;
+      ctx.fillRect(0,0,width,height);
+      const audio = new Audio(); // document.createElement('audio')와 동일
+      audio.src = './audio/01.mp3';
 
-      const balls = [];
+      canvas.onclick = () => {
+        audio.play();
+        const analyser= connectAudio();
+        draw(analyser);
+      }
 
-      let handle = 0;
+      function connectAudio() {
+        const audioContext = 
+          new window.AudioContext() || window.webkitAudioContext();
+        const audioSource = audioContext.createMediaElementSource(audio);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        audioSource.connect(analyser);
+        analyser.connect(audioContext.destination);
+        return analyser;
+      }
 
-      function getRandomColor(){
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for(let i= 0; i<6; i++){
-          color += letters[Math.floor(Math.random() * 16)];
+      function draw(analyser){
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyser.getByteFrequencyData(dataArray);
+
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.fillRect(0,0,width,height);
+
+        const barWidth = (width/bufferLength*2);
+        let barheight = 0;
+        let x = 0;
+
+        ctx.save(); // 기존 컨텍스트가 가진 정보들을 스택에 담음
+        for(let i=0; i<bufferLength; i++){
+          barHeight = dataArray[i];
+          ctx.fillStyle = '#55b';
+          ctx.fillRect(x,height-barHeight,barWidth,barHeight);
+          x+=barWidth;
         }
-        return color;
-      }
-
-      function getRandomSize(min,max){
-        return Math.floor(Math.random() * (max-min+1))+min;
-      }
-
-      canvas.onclick = (event) => {
-        const ball = {
-          x: 0,
-          y: 0,
-          radius: getRandomSize(20,50),
-          color: getRandomColor(),
-          velocity: 0,
-        };
-        ball.x = event.offsetX;
-        ball.y = event.offsetY;
-        ball.velocity = 0;
-        balls.push(ball);
-        cancelAnimationFrame(handle);
-        update();
-      };
-
-      function update() {
-        handle = requestAnimationFrame(update);
-        ctx.clearRect(0, 0, size, size);
-        balls.forEach((ball) => {
-          ctx.fillStyle = ball.color;
-          if (!ball.x && !ball.y) return;
-          ball.velocity += gravity;
-          ball.y += ball.velocity;
-
-          if (ball.y + ball.radius > size) {
-            ball.y = size - ball.radius;
-            ball.velocity = -ball.velocity * bounceFactor;
-          }
-          drawBall(ball);
-        });
-      }
-
-      function drawBall(ball) {
-        
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        ctx.restore();
+        requestAnimationFrame(()=>draw(analyser))
       }
     </script>
   </body>
