@@ -1,15 +1,21 @@
+import { getVisualizer } from "./visualizer.js";
+
 const defaultAudioImg = document.createElement("img");
 defaultAudioImg.src = "./images/mp3.png";
 defaultAudioImg.onload = () => {
-  console.log("audio image onloaded");
+  console.log("audio image loaded");
 };
 
 export default function gallery(imageSrcList, width, height, row, column) {
+  console.log("gallery");
+
   let scrollY = 0;
   let maxScrollY = 0;
   let hoverIndex = null;
   let selectedIndex = null;
   let currentScale = 1;
+
+  const visualizerMap = new Map();
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -23,17 +29,17 @@ export default function gallery(imageSrcList, width, height, row, column) {
   const itemHeight = canvas.height / row;
   const itemMargin = 2;
 
-  const imageList = imageSrcList.map((src, idx) =>
+  const imageList = imageSrcList.map((src, index) =>
     src.endsWith(".mp4") || src.endsWith(".mp3")
-      ? createVideoItem(src, idx)
-      : createImageItem(src, idx)
+      ? createVideoItem(src, index)
+      : createImageItem(src, index)
   );
 
-  function createImageItem(src, idx) {
+  function createImageItem(src, index) {
     const image = document.createElement("img");
     image.src = src;
     image.onload = () => {
-      drawItem(image, idx);
+      drawItem(image, index);
     };
     return image;
   }
@@ -73,9 +79,9 @@ export default function gallery(imageSrcList, width, height, row, column) {
     );
   }
 
-  function drawItem(item, idx, scale = 1) {
-    const left = (idx % column) * itemWidth;
-    const top = Math.trunc(idx / column) * itemHeight;
+  function drawItem(item, index, scale = 1) {
+    const left = (index % column) * itemWidth;
+    const top = Math.trunc(index / column) * itemHeight;
     const tempWidth = itemWidth - itemMargin * 2;
     const tempHeight = itemHeight - itemMargin * 2;
     const destWidth = tempWidth * scale;
@@ -85,7 +91,13 @@ export default function gallery(imageSrcList, width, height, row, column) {
 
     ctx.save();
     drawClipPath(destLeft, destTop, destWidth, destHeight, 10);
-    ctx.drawImage(isDrawableItem(item) ? item : defaultAudioImg, destLeft, destTop, destWidth, destHeight);
+    ctx.drawImage(
+      isDrawableItem(item) ? item : defaultAudioImg,
+      destLeft,
+      destTop,
+      destWidth,
+      destHeight
+    );
     ctx.restore();
   }
 
@@ -98,6 +110,7 @@ export default function gallery(imageSrcList, width, height, row, column) {
   }
 
   function drawSelectedItem(item) {
+    item = visualizerMap.get(item)?.renderer || item;
     const { width, height } = getOrgSize(item);
     const imgAspectRatio = width / height;
     const canvasAspectRatio = canvas.width / canvas.height;
@@ -140,11 +153,15 @@ export default function gallery(imageSrcList, width, height, row, column) {
   }
 
   canvas.addEventListener("wheel", (event) => {
+    if (selectedIndex !== null) return;
+
     event.preventDefault();
+
+    // console.log(event.deltaY);
     scrollY -= event.deltaY;
     scrollY = Math.min(scrollY, 0);
     scrollY = Math.max(scrollY, -maxScrollY);
-    drawCanvas();
+    // drawCanvas();
   });
 
   function getItemIndex(x, y) {
@@ -153,16 +170,16 @@ export default function gallery(imageSrcList, width, height, row, column) {
     return rowIndex * column + columnIndex;
   }
 
-  function animateScale(target, duration = 250) {
-    const startTime = Date.now();
+  function animateScale(targetScale, duration = 250) {
+    const start = Date.now();
     const initialScale = 1;
-    const diff = target - initialScale;
+    const diff = targetScale - initialScale;
 
     function step() {
-      const timePassed = Date.now() - startTime;
+      const timePassed = Date.now() - start;
       const progress = timePassed / duration;
       currentScale = initialScale + diff * progress;
-      drawCanvas();
+      // drawCanvas();
       if (progress < 1) {
         requestAnimationFrame(step);
       }
@@ -176,20 +193,43 @@ export default function gallery(imageSrcList, width, height, row, column) {
     if (hoverIndex !== newIndex) {
       hoverIndex = newIndex;
       animateScale(1.2);
-      drawCanvas();
     }
   });
 
   canvas.addEventListener("click", (event) => {
     if (selectedIndex !== null) {
+      const selectedItem = imageList[selectedIndex];
+      const visualizer = visualizerMap.get(selectedItem);
+      visualizer?.pause();
+
+      if (selectedItem && selectedItem instanceof HTMLVideoElement) {
+        selectedItem.pause();
+      }
+
       selectedIndex = null;
       hoverIndex = null;
-      drawCanvas();
     } else {
       const newIndex = getItemIndex(event.offsetX, event.offsetY - scrollY);
       if (selectedIndex !== newIndex) {
         selectedIndex = newIndex;
-        drawCanvas();
+        const selectedItem = imageList[selectedIndex];
+
+        if (selectedItem) {
+          if (!isDrawableItem(selectedItem)) {
+            let visualizer = visualizerMap.get(selectedItem);
+            if (!visualizer) {
+              visualizer = getVisualizer(selectedItem, 640, 320);
+              visualizerMap.set(selectedItem, visualizer);
+            }
+            visualizer.play();
+          }
+          if (selectedItem instanceof HTMLVideoElement) {
+            selectedItem.muted = false;
+            selectedItem.loop = true;
+
+            selectedItem.play();
+          }
+        }
       }
     }
   });
