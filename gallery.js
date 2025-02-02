@@ -19,14 +19,33 @@ export default function gallery(imageSrcList, width, height, row, column) {
   const itemHeight = canvas.height / row;
   const itemMargin = 2;
 
-  const imageList = imageSrcList.map((src,idx) => {
+  const imageList = imageSrcList.map((src,idx) => 
+    src.endsWith('.mp4')
+      ? createVideoItem(src, idx)
+      : createImageItem(src, idx)
+  );
+
+  function createImageItem(src, idx){
     const image = document.createElement('img');
     image.src = src;
     image.onload = () => {
       drawItem(image,idx);
     }
     return image;
-  });
+  }
+
+  function createVideoItem(src, index){
+    const video = document.createElement('video');
+    video.src = src;
+    video.muted = true;
+    video.onloadeddata = () => {
+      video.play();
+    };
+    video.ontimeupdate = () => {
+      drawItem(video, index);
+    }
+    return video;
+  }
 
   calcMaxScrollPos(imageList.length);
 
@@ -59,7 +78,16 @@ export default function gallery(imageSrcList, width, height, row, column) {
     
   }
 
+  function getOrgSize(item) {
+    if (item instanceof HTMLVideoElement) {
+      return { width: item.videoWidth, height: item.videoHeight };
+    } else {
+      return { width: item.width, height: item.height };
+    }
+  };
+
   function drawSelectedItem(item) {
+    const { width, height } = getOrgSize(item);
     const imgAspectRatio = width / height;
     const canvasAspectRatio = canvas.width / canvas.height;
     let renderWidth, renderHeight, offsetX, offsetY;
@@ -152,6 +180,13 @@ export default function gallery(imageSrcList, width, height, row, column) {
     }
     }
   })
+
+  function startRender() {
+    requestAnimationFrame(startRender);
+    drawCanvas();
+  }
+
+  startRender();
 
   return canvas;
 }
