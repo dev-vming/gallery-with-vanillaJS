@@ -6,6 +6,9 @@ parent.style.width = '640px';
 parent.style.height = '640px';
 
 const imageSrcList = [
+  "./audio/01.mp3",
+  "./audio/02.mp3",
+  "./audio/03.mp3",
   "./videos/01.mp4",
   "./images/04.jpg",
   "./images/05.jpg",

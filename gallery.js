@@ -1,41 +1,45 @@
+const defaultAudioImg = document.createElement("img");
+defaultAudioImg.src = "./images/mp3.png";
+defaultAudioImg.onload = () => {
+  console.log("audio image onloaded");
+};
 
 export default function gallery(imageSrcList, width, height, row, column) {
-
   let scrollY = 0;
   let maxScrollY = 0;
   let hoverIndex = null;
   let selectedIndex = null;
   let currentScale = 1;
-  
-  const canvas = document.createElement('canvas');
+
+  const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
 
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff';
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, width, height);
 
   const itemWidth = canvas.width / column;
   const itemHeight = canvas.height / row;
   const itemMargin = 2;
 
-  const imageList = imageSrcList.map((src,idx) => 
-    src.endsWith('.mp4')
+  const imageList = imageSrcList.map((src, idx) =>
+    src.endsWith(".mp4") || src.endsWith(".mp3")
       ? createVideoItem(src, idx)
       : createImageItem(src, idx)
   );
 
-  function createImageItem(src, idx){
-    const image = document.createElement('img');
+  function createImageItem(src, idx) {
+    const image = document.createElement("img");
     image.src = src;
     image.onload = () => {
-      drawItem(image,idx);
-    }
+      drawItem(image, idx);
+    };
     return image;
   }
 
-  function createVideoItem(src, index){
-    const video = document.createElement('video');
+  function createVideoItem(src, index) {
+    const video = document.createElement("video");
     video.src = src;
     video.muted = true;
     video.onloadeddata = () => {
@@ -43,7 +47,7 @@ export default function gallery(imageSrcList, width, height, row, column) {
     };
     video.ontimeupdate = () => {
       drawItem(video, index);
-    }
+    };
     return video;
   }
 
@@ -60,22 +64,29 @@ export default function gallery(imageSrcList, width, height, row, column) {
     ctx.clip();
   }
 
-  function drawItem(item, idx, scale=1) {
+  function isDrawableItem(item) {
+    return (
+      item instanceof HTMLImageElement ||
+      (item instanceof HTMLVideoElement &&
+        item.videoWidth > 0 &&
+        item.videoHeight > 0)
+    );
+  }
+
+  function drawItem(item, idx, scale = 1) {
     const left = (idx % column) * itemWidth;
     const top = Math.trunc(idx / column) * itemHeight;
     const tempWidth = itemWidth - itemMargin * 2;
     const tempHeight = itemHeight - itemMargin * 2;
     const destWidth = tempWidth * scale;
     const destHeight = tempHeight * scale;
-    const destLeft = left + itemMargin + (tempWidth - destWidth)/2;
-    const destTop = top + itemMargin + scrollY + (tempHeight-destHeight)/2;
-
+    const destLeft = left + itemMargin + (tempWidth - destWidth) / 2;
+    const destTop = top + itemMargin + scrollY + (tempHeight - destHeight) / 2;
 
     ctx.save();
     drawClipPath(destLeft, destTop, destWidth, destHeight, 10);
-    ctx.drawImage(item,destLeft,destTop,destWidth,destHeight);
+    ctx.drawImage(isDrawableItem(item) ? item : defaultAudioImg, destLeft, destTop, destWidth, destHeight);
     ctx.restore();
-    
   }
 
   function getOrgSize(item) {
@@ -84,7 +95,7 @@ export default function gallery(imageSrcList, width, height, row, column) {
     } else {
       return { width: item.width, height: item.height };
     }
-  };
+  }
 
   function drawSelectedItem(item) {
     const { width, height } = getOrgSize(item);
@@ -110,14 +121,16 @@ export default function gallery(imageSrcList, width, height, row, column) {
   }
 
   function drawCanvas() {
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0,0,canvas.width, canvas.height);
-    imageList.forEach((image,index) => {
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    imageList.forEach((image, index) => {
+      if (hoverIndex === index) return;
       drawItem(image, index);
     });
 
-    hoverIndex !== null && drawItem(imageList[hoverIndex], hoverIndex, currentScale);
-    selectedIndex!==null && drawSelectedItem(imageList[hoverIndex])
+    hoverIndex !== null &&
+      drawItem(imageList[hoverIndex], hoverIndex, currentScale);
+    selectedIndex !== null && drawSelectedItem(imageList[hoverIndex]);
   }
 
   function calcMaxScrollPos(itemCount) {
@@ -126,7 +139,7 @@ export default function gallery(imageSrcList, width, height, row, column) {
     maxScrollY = totalHeight - canvas.height;
   }
 
-  canvas.addEventListener('wheel', (event) => {
+  canvas.addEventListener("wheel", (event) => {
     event.preventDefault();
     scrollY -= event.deltaY;
     scrollY = Math.min(scrollY, 0);
@@ -157,9 +170,9 @@ export default function gallery(imageSrcList, width, height, row, column) {
     step();
   }
 
-  canvas.addEventListener('mousemove', (event) => {
+  canvas.addEventListener("mousemove", (event) => {
     if (selectedIndex !== null) return;
-    const newIndex = getItemIndex(event.offsetX, event.offsetY-scrollY);
+    const newIndex = getItemIndex(event.offsetX, event.offsetY - scrollY);
     if (hoverIndex !== newIndex) {
       hoverIndex = newIndex;
       animateScale(1.2);
@@ -167,19 +180,19 @@ export default function gallery(imageSrcList, width, height, row, column) {
     }
   });
 
-  canvas.addEventListener('click', (event) => {
+  canvas.addEventListener("click", (event) => {
     if (selectedIndex !== null) {
-      selectedIndex = null; 
+      selectedIndex = null;
       hoverIndex = null;
       drawCanvas();
     } else {
-      const newIndex = getItemIndex(event.offsetX, event.offsetY-scrollY);
-    if (selectedIndex !== newIndex) {
-      selectedIndex = newIndex;
-      drawCanvas();
+      const newIndex = getItemIndex(event.offsetX, event.offsetY - scrollY);
+      if (selectedIndex !== newIndex) {
+        selectedIndex = newIndex;
+        drawCanvas();
+      }
     }
-    }
-  })
+  });
 
   function startRender() {
     requestAnimationFrame(startRender);
