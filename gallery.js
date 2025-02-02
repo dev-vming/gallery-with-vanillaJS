@@ -1,5 +1,8 @@
 
 export default function gallery(imageSrcList, width, height, row, column) {
+
+  let scrollY = 0;
+  let maxScrollY = 0;
   
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -22,6 +25,8 @@ export default function gallery(imageSrcList, width, height, row, column) {
     return image;
   });
 
+  calcMaxScrollPos(imageList.length);
+
   function drawClipPath(left, top, width, height, radius) {
     ctx.beginPath();
     ctx.moveTo(left + radius, top);
@@ -37,7 +42,7 @@ export default function gallery(imageSrcList, width, height, row, column) {
     const left = (idx % column) * itemWidth;
     const top = Math.trunc(idx / column) * itemHeight;
     const destLeft = left + itemMargin;
-    const destTop = top + itemMargin;
+    const destTop = top + itemMargin + scrollY;
     const destWidth = itemWidth - itemMargin * 2;
     const destHeight = itemHeight - itemMargin * 2;
 
@@ -45,7 +50,30 @@ export default function gallery(imageSrcList, width, height, row, column) {
     drawClipPath(destLeft, destTop, destWidth, destHeight, 10);
     ctx.drawImage(item,destLeft,destTop,destWidth,destHeight);
     ctx.restore();
+    
   }
+
+  function drawCanvas() {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0,0,canvas.width, canvas.height);
+    imageList.forEach((image,index) => {
+      drawItem(image, index);
+    });
+  }
+
+  function calcMaxScrollPos(itemCount) {
+    const rowCount = Math.ceil(itemCount / column);
+    const totalHeight = rowCount * itemHeight;
+    maxScrollY = totalHeight - canvas.height;
+  }
+
+  canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    scrollY -= event.deltaY;
+    scrollY = Math.min(scrollY, 0);
+    scrollY = Math.max(scrollY, -maxScrollY);
+    drawCanvas();
+})
 
   return canvas;
 }
